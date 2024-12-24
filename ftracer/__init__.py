@@ -63,14 +63,17 @@ def _repr(v):
 def trace(func):
     """Decorator function for a function for watching its invocation."""
     def _wrapper(*args, **kwargs):
+        # Function might have been wrapped by another decorator.
+        orig_func = func.__wrapped__ if hasattr(func, '__wrapped__') else func
         args_list = [
-            f'{k}={_repr(v)}' for k, v in zip(func.__code__.co_varnames, args)
+            f'{k}={repr(v)}'
+            for k, v in zip(orig_func.__code__.co_varnames, args)
         ]
-        kwargs_list = [f'{k}={_repr(v)}' for k, v in kwargs.items()]
+        kwargs_list = [f'{k}={repr(v)}' for k, v in kwargs.items()]
         all_args = ', '.join(args_list + kwargs_list)
-        _debug(f'{func.__name__}({all_args})')
+        _debug(f'{orig_func.__name__}({all_args})')
         retval = func(*args, **kwargs)
-        # _debug(f'{func.__name__}({all_args}) -> {_repr(retval)}')
+        _debug(f'{orig_func.__name__}({all_args}) -> {repr(retval)}')
         return retval
 
     return _wrapper
