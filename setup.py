@@ -6,7 +6,7 @@ with open('README.md', 'r') as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="tbdump",
+    name="ftracer",
     version="1.0",
     author="Hiroyuki Ohsaki",
     author_email="ohsaki@lsnl.jp",
