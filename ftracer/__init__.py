@@ -18,11 +18,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import inspect
 import re
 import sys
 import types
 
-DEBUG = False
+DEBUG = True
 PREFIX = '** '
 LIST_LIMIT = 80
 
@@ -74,12 +75,25 @@ def trace(func):
 
     return __wrapper
 
+def __is_method_from_base(cls, method_name):
+    for base in cls.__mro__[1:]:
+        if hasattr(base, method_name):
+            base_method = getattr(base, method_name)
+            if inspect.isfunction(base_method) or inspect.ismethod(
+                    base_method):
+                return True
+    return False
+
 def trace_methods(cls):
     """Decorator function for a class for watching invocations of all
     methods."""
     for attr_name in dir(cls):
         attr = getattr(cls, attr_name)
-        if callable(attr) and not attr_name.startswith('__'):
+        if callable(attr) and not attr_name.startswith(
+                '__') and not __is_method_from_base(cls, attr.__name__):
+            if DEBUG:
+                __debug(
+                    f'** attach {__repr(trace)} to method {cls}.{attr_name}')
             setattr(cls, attr_name, trace(attr))
     return cls
 
@@ -94,7 +108,8 @@ def trace_all_functions(decorator=None, module='__main__'):
         if isinstance(obj, types.FunctionType) and obj.__module__ == module:
             if not obj.__name__.startswith('__'):
                 if DEBUG:
-                    __debug(f'attach {__repr(decorator)} to function {name}')
+                    __debug(
+                        f'** attach {__repr(decorator)} to function {name}')
                 global_vars[name] = decorator(obj)
 
 def trace_all_classes(decorator=None, module='__main__'):
@@ -108,5 +123,5 @@ def trace_all_classes(decorator=None, module='__main__'):
         if isinstance(obj, type) and obj.__module__ == module:
             if not obj.__name__.startswith('__'):
                 if DEBUG:
-                    __debug(f'attach {__repr(decorator)} to class {name}')
+                    __debug(f'** attach {__repr(decorator)} to class {name}')
                 global_vars[name] = decorator(obj)
