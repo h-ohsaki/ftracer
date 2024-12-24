@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-#
+# Decorator functions to trace invocation of functions and class methods.
 # Copyright (c) 2024, Hiroyuki Ohsaki.
 # All rights reserved.
 #
@@ -22,13 +22,15 @@ import re
 import sys
 import types
 
-PREFIX = '**ftracer: '
-LIST_LIMIT = 30
+DEBUG = False
+PREFIX = '** '
+LIST_LIMIT = 80
 
 def __debug(msg):
     print(f'{PREFIX}{msg}', file=sys.stderr)
 
 def __repr(v):
+    """Pretty printer for object V."""
     name = type(v).__name__
     if name == 'str':
         return f"'{v}'"
@@ -58,6 +60,7 @@ def __repr(v):
         return name
 
 def trace(func):
+    """Decorator function for a function for watching its invocation."""
     def __wrapper(*args, **kwargs):
         args_list = [
             f'{k}={__repr(v)}' for k, v in zip(func.__code__.co_varnames, args)
@@ -66,81 +69,44 @@ def trace(func):
         all_args = ', '.join(args_list + kwargs_list)
         __debug(f'{func.__name__}({all_args})')
         retval = func(*args, **kwargs)
-        __debug(f'{func.__name__}({all_args}) -> {__repr(retval)}')
+        # __debug(f'{func.__name__}({all_args}) -> {__repr(retval)}')
         return retval
 
     return __wrapper
 
 def trace_methods(cls):
+    """Decorator function for a class for watching invocations of all
+    methods."""
     for attr_name in dir(cls):
         attr = getattr(cls, attr_name)
         if callable(attr) and not attr_name.startswith('__'):
             setattr(cls, attr_name, trace(attr))
     return cls
 
-def trace_all_functions(decorator=None):
+def trace_all_functions(decorator=None, module='__main__'):
+    """Install decorator function DECORATOR to all functions in the module
+    MODULE.  If DECORATOR is not specified, use `trace' decorator.  If MODULE
+    is not specified, use the main module `__main__'."""
     if decorator is None:
         decorator = trace
-    global_vars = globals()
+    global_vars = sys.modules[module].__dict__
     for name, obj in global_vars.items():
-        if isinstance(obj, types.FunctionType) and obj.__module__ == __name__:
+        if isinstance(obj, types.FunctionType) and obj.__module__ == module:
             if not obj.__name__.startswith('__'):
-                __debug(f'attach {__repr(decorator)} to function {name}')
+                if DEBUG:
+                    __debug(f'attach {__repr(decorator)} to function {name}')
                 global_vars[name] = decorator(obj)
 
-def trace_all_classes(decorator=None):
+def trace_all_classes(decorator=None, module='__main__'):
+    """Install decorator function DECORATOR to all classes in the module
+    MODULE.  If DECORATOR is not specified, use `trace_methods' decorator.  If
+    MODULE is not specified, use the main module `__main__'."""
     if decorator is None:
         decorator = trace_methods
-    global_vars = globals()
+    global_vars = sys.modules[module].__dict__
     for name, obj in global_vars.items():
-        if isinstance(obj, type) and obj.__module__ == __name__:
+        if isinstance(obj, type) and obj.__module__ == module:
             if not obj.__name__.startswith('__'):
-                __debug(f'attach {__repr(decorator)} to class {name}')
+                if DEBUG:
+                    __debug(f'attach {__repr(decorator)} to class {name}')
                 global_vars[name] = decorator(obj)
-
-class _TestClass:
-    def m1(self, x, y):
-        return x + y
-
-    def m2(self, z):
-        return z * z
-
-def _f1(x):
-    _f2(x + 1)
-
-def _f2(y):
-    return _f3(y * 2, 3)
-
-def _f3(x, y):
-    return x + y
-
-def _f4(name, age):
-    pass
-
-def _f5(lst, x):
-    pass
-
-def _f6(lst, x):
-    pass
-
-def _f7(x, y):
-    pass
-
-def main():
-    trace_all_functions()
-    trace_all_classes()
-
-    _f1(4)
-    _f2(12.3456789)
-    _f4('John', 34)
-    _f5(list(range(1000)), 1 / 123456789)
-    _f5([1, '2', 3.4, str, _f5], None)
-    _f6([1, '2', 3.4, str, _f5], None)
-    _f7(3, 'soo')
-
-    obj = _TestClass()
-    obj.m1(1.2, 3.4)
-    obj.m2(11)
-
-if __name__ == "__main__":
-    main()
