@@ -27,10 +27,10 @@ DEBUG = True
 PREFIX = '** '
 LIST_LIMIT = 80
 
-def __debug(msg):
+def _debug(msg):
     print(f'{PREFIX}{msg}', file=sys.stderr)
 
-def __repr(v):
+def _repr(v):
     """Pretty printer for object V."""
     name = type(v).__name__
     if name == 'str':
@@ -43,7 +43,7 @@ def __repr(v):
         elems = []
         length = 0
         for elem in v:
-            s = __repr(elem)
+            s = _repr(elem)
             elems.append(s)
             length += len(s)
             if length > LIST_LIMIT:
@@ -58,24 +58,24 @@ def __repr(v):
         s = re.sub(r' at 0x[0-9a-f]+', '', s)
         return s
     else:
-        return name
+        return f'{name}'
 
 def trace(func):
     """Decorator function for a function for watching its invocation."""
-    def __wrapper(*args, **kwargs):
+    def _wrapper(*args, **kwargs):
         args_list = [
-            f'{k}={__repr(v)}' for k, v in zip(func.__code__.co_varnames, args)
+            f'{k}={_repr(v)}' for k, v in zip(func.__code__.co_varnames, args)
         ]
-        kwargs_list = [f'{k}={__repr(v)}' for k, v in kwargs.items()]
+        kwargs_list = [f'{k}={_repr(v)}' for k, v in kwargs.items()]
         all_args = ', '.join(args_list + kwargs_list)
-        __debug(f'{func.__name__}({all_args})')
+        _debug(f'{func.__name__}({all_args})')
         retval = func(*args, **kwargs)
-        # __debug(f'{func.__name__}({all_args}) -> {__repr(retval)}')
+        # _debug(f'{func.__name__}({all_args}) -> {_repr(retval)}')
         return retval
 
-    return __wrapper
+    return _wrapper
 
-def __is_method_from_base(cls, method_name):
+def _is_method_from_base(cls, method_name):
     for base in cls.__mro__[1:]:
         if hasattr(base, method_name):
             base_method = getattr(base, method_name)
@@ -90,10 +90,9 @@ def trace_methods(cls):
     for attr_name in dir(cls):
         attr = getattr(cls, attr_name)
         if callable(attr) and not attr_name.startswith(
-                '__') and not __is_method_from_base(cls, attr.__name__):
+                '_') and not _is_method_from_base(cls, attr.__name__):
             if DEBUG:
-                __debug(
-                    f'** attach {__repr(trace)} to method {cls}.{attr_name}')
+                _debug(f'[INFO] attach method: {cls}.{attr_name}')
             setattr(cls, attr_name, trace(attr))
     return cls
 
@@ -106,10 +105,9 @@ def trace_all_functions(decorator=None, module='__main__'):
     global_vars = sys.modules[module].__dict__
     for name, obj in global_vars.items():
         if isinstance(obj, types.FunctionType) and obj.__module__ == module:
-            if not obj.__name__.startswith('__'):
+            if not obj.__name__.startswith('_'):
                 if DEBUG:
-                    __debug(
-                        f'** attach {__repr(decorator)} to function {name}')
+                    _debug(f'[INFO] attach function: {name}')
                 global_vars[name] = decorator(obj)
 
 def trace_all_classes(decorator=None, module='__main__'):
@@ -121,7 +119,7 @@ def trace_all_classes(decorator=None, module='__main__'):
     global_vars = sys.modules[module].__dict__
     for name, obj in global_vars.items():
         if isinstance(obj, type) and obj.__module__ == module:
-            if not obj.__name__.startswith('__'):
+            if not obj.__name__.startswith('_'):
                 if DEBUG:
-                    __debug(f'** attach {__repr(decorator)} to class {name}')
+                    _debug(f'[INFO] attach class: {name}')
                 global_vars[name] = decorator(obj)
