@@ -7,7 +7,7 @@ with open('README.md', 'r') as fh:
 
 setuptools.setup(
     name="ftracer",
-    version="1.4",
+    version="1.6",
     author="Hiroyuki Ohsaki",
     author_email="ohsaki@lsnl.jp",
     description=
