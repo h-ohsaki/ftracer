@@ -71,6 +71,12 @@ def _repr(v):
 _call_depth = threading.local()
 _call_depth.value = 0
 
+def _var_names(func, size):
+    try:
+        return func.__code__.co_varnames
+    except AttributeError:
+        return ['??'] * size
+
 def trace(func):
     """Decorator function for a function for watching its invocation."""
     def _wrapper(*args, **kwargs):
@@ -79,8 +85,7 @@ def trace(func):
         orig_func = func.__wrapped__ if hasattr(func, '__wrapped__') else func
         # Constrct function arguments.
         args_list = [
-            f'{k}={_repr(v)}'
-            for k, v in zip(orig_func.__code__.co_varnames, args)
+            f'{k}={_repr(v)}' for k, v in zip(_var_names(orig_func, len(args)), args)
         ]
         kwargs_list = [f'{k}={_repr(v)}' for k, v in kwargs.items()]
         all_args = ', '.join(args_list + kwargs_list)
