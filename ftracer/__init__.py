@@ -69,7 +69,6 @@ def _repr(v):
         return name
 
 _call_depth = threading.local()
-_call_depth.value = 0
 
 def _var_names(func, size):
     try:
@@ -80,6 +79,8 @@ def _var_names(func, size):
 def trace(func):
     """Decorator function for a function for watching its invocation."""
     def _wrapper(*args, **kwargs):
+        if not hasattr(_call_depth, 'value'):
+            _call_depth.value = 0
         _call_depth.value += 1
         # Function might have been wrapped by another decorator.
         orig_func = func.__wrapped__ if hasattr(func, '__wrapped__') else func
