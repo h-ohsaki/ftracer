@@ -18,16 +18,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import functools
 import inspect
 import re
 import sys
 import threading
 import types
 
+import ansiterm
+
 DEBUG = True
-PREFIX = '** '
-LIST_LIMIT = 80
+PREFIX = ''
+LIST_LIMIT = 40
 
 def _debug(msg):
     print(f'{PREFIX}{msg}', file=sys.stderr)
@@ -76,16 +77,21 @@ def trace(func):
         _call_depth.value += 1
         # Function might have been wrapped by another decorator.
         orig_func = func.__wrapped__ if hasattr(func, '__wrapped__') else func
+        # Constrct function arguments.
         args_list = [
             f'{k}={_repr(v)}'
             for k, v in zip(orig_func.__code__.co_varnames, args)
         ]
         kwargs_list = [f'{k}={_repr(v)}' for k, v in kwargs.items()]
         all_args = ', '.join(args_list + kwargs_list)
+        # Display trace event.
         indent = '  ' * (_call_depth.value - 1)
-        _debug(f'{indent}{orig_func.__name__}({all_args})')
+        name_str = ansiterm.cyan(orig_func.__name__)
+        args_str = ansiterm.magenta(all_args)
+        _debug(f'{indent}{name_str}({args_str})')
         retval = func(*args, **kwargs)
-        # _debug(f'{indent}{orig_func.__name__}({all_args}) -> {_repr(retval)}')
+        retval_str = ansiterm.blue(_repr(retval))
+        _debug(f'{indent}-> {retval_str}')
         _call_depth.value -= 1
         return retval
 
