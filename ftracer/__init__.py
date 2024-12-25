@@ -53,12 +53,17 @@ def _repr(v):
         return f'[{elems_str}]'
     elif name in ['int', 'dict', 'type']:
         return f'{v}'
-    elif name in ['function']:
+    elif name in ['function', 'method']:
         s = f'{v}'
+        s = re.sub(r' of <.+?>', '', s)
         s = re.sub(r' at 0x[0-9a-f]+', '', s)
         return s
     else:
-        return f'{name}'
+        # s = f'{v}'
+        # s = re.sub(r' object', '', s)
+        # s = re.sub(r' at 0x[0-9a-f]+', '', s)
+        # return s
+        return name
 
 def trace(func):
     """Decorator function for a function for watching its invocation."""
@@ -66,14 +71,14 @@ def trace(func):
         # Function might have been wrapped by another decorator.
         orig_func = func.__wrapped__ if hasattr(func, '__wrapped__') else func
         args_list = [
-            f'{k}={repr(v)}'
+            f'{k}={_repr(v)}'
             for k, v in zip(orig_func.__code__.co_varnames, args)
         ]
-        kwargs_list = [f'{k}={repr(v)}' for k, v in kwargs.items()]
+        kwargs_list = [f'{k}={_repr(v)}' for k, v in kwargs.items()]
         all_args = ', '.join(args_list + kwargs_list)
-        _debug(f'{orig_func.__name__}({all_args})')
+        # _debug(f'{orig_func.__name__}({all_args})')
         retval = func(*args, **kwargs)
-        _debug(f'{orig_func.__name__}({all_args}) -> {repr(retval)}')
+        _debug(f'{orig_func.__name__}({all_args}) -> {_repr(retval)}')
         return retval
 
     return _wrapper
