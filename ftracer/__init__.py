@@ -18,9 +18,11 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import functools
 import inspect
 import re
 import sys
+import threading
 import types
 
 DEBUG = True
@@ -65,9 +67,13 @@ def _repr(v):
         # return s
         return name
 
+_call_depth = threading.local()
+_call_depth.value = 0
+
 def trace(func):
     """Decorator function for a function for watching its invocation."""
     def _wrapper(*args, **kwargs):
+        _call_depth.value += 1
         # Function might have been wrapped by another decorator.
         orig_func = func.__wrapped__ if hasattr(func, '__wrapped__') else func
         args_list = [
@@ -76,9 +82,11 @@ def trace(func):
         ]
         kwargs_list = [f'{k}={_repr(v)}' for k, v in kwargs.items()]
         all_args = ', '.join(args_list + kwargs_list)
-        # _debug(f'{orig_func.__name__}({all_args})')
+        indent = '  ' * (_call_depth.value - 1)
+        _debug(f'{indent}{orig_func.__name__}({all_args})')
         retval = func(*args, **kwargs)
-        _debug(f'{orig_func.__name__}({all_args}) -> {_repr(retval)}')
+        # _debug(f'{indent}{orig_func.__name__}({all_args}) -> {_repr(retval)}')
+        _call_depth.value -= 1
         return retval
 
     return _wrapper
